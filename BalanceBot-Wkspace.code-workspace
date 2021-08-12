@@ -10,5 +10,21 @@
 			"path": "..\\libraries\\Makeblock-Libraries-master"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"algorithm": "cpp",
+			"ios": "cpp",
+			"iosfwd": "cpp",
+			"istream": "cpp",
+			"memory": "cpp",
+			"ostream": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"xiosbase": "cpp",
+			"xmemory": "cpp",
+			"xmemory0": "cpp",
+			"xstring": "cpp",
+			"xutility": "cpp"
+		}
+	}
 }

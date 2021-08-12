@@ -10,21 +10,19 @@
 #define LPF_FRQ 0.25  //Hz
 #define ANGPOT_RANGE 10 //deg
 #define SPDPOT_RANGE 10 //rpm
-#define DUAL_LOOP true
 
-#if DUAL_LOOP
-double pidBias = 0.5; // 0 angle control, 1 speed control, 0.5 equal mix
-double angInMixed;
-#endif
+#define DUAL_LOOP false
+
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
-double angKp = 1;
+double angKp = 1.5;
 double angKi = 0;
 double angKd = 0;
 double angMaxDeg = 25;
 double angMinDeg = -angMaxDeg;
 //Angle Control Vars
 double angYdeg;
+double angYscaled;
 double angOffsetDeg;
 double angOffset;
 double angSetPointScaled = scale(angSetPointDeg,angMaxDeg,angMinDeg);
@@ -51,6 +49,9 @@ double spdSetPointScaled = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM);
 double spdSP = spdSetPointScaled;
 double spdIn; // 0-255
 double spdOut;  //0-255
+
+double pidBias = 0.5; // 0 angle control, 1 speed control, 0.5 equal mix
+double angInMixed;
 #endif
 //Class Instantiation
     // MeUltrasonicSensor ultraSensor(PORT_7);
@@ -65,21 +66,14 @@ PID angPID(&angIn, &angOut, &angSP, angKp, angKi, angKd, DIRECT);
 PID spdPID(&spdIn, &spdOut, &spdSP, spdKp, spdKi, spdKd, DIRECT);
 
 void isr_process_encoder1(void){
-    if(digitalRead(motor1.getPortB()) == 0){
-        motor1.pulsePosMinus();
-    }
-    else{
-        motor1.pulsePosPlus();;
-    }
+    if(digitalRead(motor1.getPortB()) == 0) motor1.pulsePosMinus();
+    else motor1.pulsePosPlus();
 }
 void isr_process_encoder2(void){
-    if(digitalRead(motor2.getPortB()) == 0){
-        motor2.pulsePosMinus();
-    }
-    else{
-        motor2.pulsePosPlus();
-    }
+    if(digitalRead(motor2.getPortB()) == 0) motor2.pulsePosMinus();
+    else motor2.pulsePosPlus();
 }
+
 #endif
 void setup(){
     #if DUAL_LOOP
@@ -101,8 +95,10 @@ void setup(){
 
     gyro.begin();
     angYdeg = gyro.getAngleY();
-    angIn = angSetPointScaled;
-    angPID.SetSampleTime(50); //ms
+    angYscaled = scale(angYdeg,angMaxDeg,angMinDeg);
+    angIn = angYscaled;
+    angPID.SetSampleTime(20); //ms
+    angPID.SetOutputLimits(-255,255);
     angPID.SetMode(AUTOMATIC);
 }
 
@@ -111,7 +107,7 @@ void loop(){
     //Speed Control
         //modify setpoint by pot value
     spdOffsetRPM = scale(spdPot.read(),972,0,SPDPOT_RANGE,-SPDPOT_RANGE);
-    spdOffset = scale(spdOffsetRPM,spdMaxRPM,-spdMinRPM,255,-255);
+    spdOffset = scale(spdOffsetRPM,spdMaxRPM,spdMinRPM,255,-255);
     spdSP = spdSetPointScaled +spdOffset;
     motor1.updateSpeed();
     motor2.updateSpeed();
@@ -127,7 +123,7 @@ void loop(){
     gyro.update();
         //modify setpoint by pot value
     angOffsetDeg = scale(angPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
-    angOffset = scale(angOffsetDeg,angMaxDeg,-angMinDeg,255,-255);
+    angOffset = scale(angOffsetDeg,angMaxDeg,angMinDeg,255,-255);
     #if DUAL_LOOP
     //cascade PID, speed outer loop, angle inner loop
     angSP = mix(angSetPointScaled +angOffset,spdOut,pidBias);
@@ -135,20 +131,29 @@ void loop(){
     angSP = angSetPointScaled +angOffset;
     #endif
     angYdeg = gyro.getAngleY();
-    angIn = scale(angYdeg,angMaxDeg,angMinDeg);
+    angIn = 255-scale(angYdeg,angMaxDeg,angMinDeg);
     angPID.Compute();
 
     //Motor Output
-    motor1.setMotorPwm(angOut);
-    motor2.setMotorPwm(-angOut);
+    motor1.setMotorPwm(-angOut);
+    motor2.setMotorPwm(angOut);
 
     #if true
         #if DUAL_LOOP
     Serial.print("motorSpd:");
     Serial.print(spdMotorAvgLPF);
         #endif
+    // Serial.print("angInDeg:");
+    // Serial.print(angYdeg);
+    Serial.print(" angIn:");
+    Serial.print(angIn);
     Serial.print(" angOut:");
     Serial.print(angOut);
+    // Serial.print(" angSPdeg:");
+    // Serial.print(angSetPointDeg+angOffsetDeg);
+    Serial.print(" angSP:");
+    Serial.print(angSP);
+
     Serial.print("\n");
     #endif
 

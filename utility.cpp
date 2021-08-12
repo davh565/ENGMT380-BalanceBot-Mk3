@@ -4,7 +4,10 @@ double scale(double var,
             double oldMin = 0, 
             double newMax=255, 
             double newMin=0) {
-            return (var-oldMin)/(oldMax-oldMin)*(newMax-newMin)+newMin;
+                double output = (var-oldMin)/(oldMax-oldMin)*(newMax-newMin)+newMin;
+                if (output > newMax) output = newMax; 
+                if (output < newMin) output = newMin; 
+            return output;
 }
 
 double mix(double input1, double input2, double bias){
