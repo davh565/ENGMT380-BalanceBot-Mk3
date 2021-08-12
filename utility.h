@@ -7,4 +7,5 @@ double scale(double var,
             double newMax=255, 
             double newMin=0);
 
+double mix(double input1, double input2, double bias);
 #endif

@@ -12,6 +12,10 @@
 #define SPDPOT_RANGE 10 //rpm
 #define DUAL_LOOP true
 
+#if DUAL_LOOP
+double pidBias = 0.5; // 0 angle control, 1 speed control, 0.5 equal mix
+double angInMixed;
+#endif
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
 double angKp = 1;
@@ -23,7 +27,8 @@ double angMinDeg = -angMaxDeg;
 double angYdeg;
 double angOffsetDeg;
 double angOffset;
-double angSP = scale(angSetPointDeg,angMaxDeg,angMinDeg);
+double angSetPointScaled = scale(angSetPointDeg,angMaxDeg,angMinDeg);
+double angSP = angSetPointScaled;
 double angIn; // 0-255
 double angOut;  //0-255
 
@@ -42,7 +47,8 @@ double spdMotorAvg;
 double spdMotorAvgLPF;
 double spdOffsetRPM;
 double spdOffset;
-double spdSP = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM);
+double spdSetPointScaled = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM);
+double spdSP = spdSetPointScaled;
 double spdIn; // 0-255
 double spdOut;  //0-255
 #endif
@@ -95,7 +101,7 @@ void setup(){
 
     gyro.begin();
     angYdeg = gyro.getAngleY();
-    angIn = scale(angYdeg,angMaxDeg,angMinDeg);
+    angIn = angSetPointScaled;
     angPID.SetSampleTime(50); //ms
     angPID.SetMode(AUTOMATIC);
 }
@@ -106,7 +112,7 @@ void loop(){
         //modify setpoint by pot value
     spdOffsetRPM = scale(spdPot.read(),972,0,SPDPOT_RANGE,-SPDPOT_RANGE);
     spdOffset = scale(spdOffsetRPM,spdMaxRPM,-spdMinRPM,255,-255);
-    spdSP = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM) +spdOffset;
+    spdSP = spdSetPointScaled +spdOffset;
     motor1.updateSpeed();
     motor2.updateSpeed();
     spdMotor1 = motor1.getCurrentSpeed();
@@ -122,7 +128,12 @@ void loop(){
         //modify setpoint by pot value
     angOffsetDeg = scale(angPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
     angOffset = scale(angOffsetDeg,angMaxDeg,-angMinDeg,255,-255);
-    angSP = scale(angSetPointDeg,angMaxDeg,angMinDeg) +angOffset;
+    #if DUAL_LOOP
+    //cascade PID, speed outer loop, angle inner loop
+    angSP = mix(angSetPointScaled +angOffset,spdOut,pidBias);
+    #else
+    angSP = angSetPointScaled +angOffset;
+    #endif
     angYdeg = gyro.getAngleY();
     angIn = scale(angYdeg,angMaxDeg,angMinDeg);
     angPID.Compute();
