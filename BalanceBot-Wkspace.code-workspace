@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "..\\MT380BalanceBot"
+		},
+		{
+			"path": "..\\libraries\\Makeblock-Libraries-master"
+		}
+	],
+	"settings": {}
+}
