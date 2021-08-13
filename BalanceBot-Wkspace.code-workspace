@@ -24,7 +24,9 @@
 			"xmemory": "cpp",
 			"xmemory0": "cpp",
 			"xstring": "cpp",
-			"xutility": "cpp"
+			"xutility": "cpp",
+			"xlocale": "cpp",
+			"xstddef": "cpp"
 		}
 	}
 }

@@ -5,21 +5,24 @@
 #include "MeMegaPi.h"
 #include "utility.h"
 
-#define UPRIGHT -.53  //deg
-#define TILTBAK -8  //deg
+#define UPRIGHT 0  //deg
+#define TILTBAK 0  //deg
 #define LPF_FRQ 0.25  //Hz
-#define ANGPOT_RANGE 5 //deg
-#define SPDPOT_RANGE 150 //rpm
+#define ANGPOT_RANGE 35 //deg
+#define SPDPOT_RANGE 50 //rpm
 #define SAMPLETIME 20 //ms
 #define DUAL_LOOP true
 
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
-double angKp = 3.5;
-double angKi = 8;
+double angKp = 6;//2.5;
+double angKi = 8;//1;
 double angKd = 0;
-double angMaxDeg = 25;
-double angMinDeg = -angMaxDeg;
+double angKpAgg = 3.5;//2.5;
+double angKiAgg = 2;//1;
+double angKdAgg = 0;
+double angMaxDeg = 41;
+double angMinDeg = -41;
 //Angle Control Vars
 double angYdeg;
 double angYscaled;
@@ -33,9 +36,9 @@ double angOut;  //0-255
 #if DUAL_LOOP
 //Speed Control Params
 double spdSetPointRPM = 0;
-double spdKp = .1;
-double spdKi = .5;
-double spdKd = .15;
+double spdKp = 1;
+double spdKi = 0;
+double spdKd = 0;
 double spdMaxRPM = 170;
 double spdMinRPM = -spdMaxRPM;
 //Speed Control Vars
@@ -52,7 +55,7 @@ double spdOut;  //0-255
 double pidBias = 1.0; // 0 angle control, 1 speed control, 0.5 equal mix
 double angInMixed;
 #endif
-double pidSum;
+double motorOut;
 //Class Instantiation
     // MeUltrasonicSensor ultraSensor(PORT_7);
 MeGyro gyro;
@@ -129,15 +132,17 @@ void loop(){
     // //cascade PID, speed outer loop, angle inner loop
     // angSP = scale(angSetPointScaled +angOffset+spdOut,255,0);
     // #else
-    angSP = angSetPointScaled +angOffset;
+    angSP = spdOut;
     angYdeg = gyro.getAngleY();
-    angIn = -scale(angYdeg,angMaxDeg,angMinDeg,255,-255)-spdOut;
+    angIn = -scale(angYdeg,angMaxDeg,angMinDeg,255,-255);
     if (angIn > 255) angIn = 255;
     else if (angIn < -255) angIn = -255;
     angPID.Compute();
 
     //cap at limits
-    pidSum = angOut;
+    motorOut = angOut;
+    if (angYdeg > angMaxDeg) motorOut = 0;
+    else if (angYdeg < angMinDeg) motorOut = 0;
 
 
  
@@ -171,6 +176,6 @@ void loop(){
     Serial.print("\n");
     #endif
    //Motor Output
-    motor1.setMotorPwm(-angOut);
-    motor2.setMotorPwm(angOut);
+    motor1.setMotorPwm(-motorOut);
+    motor2.setMotorPwm(motorOut);
 }
