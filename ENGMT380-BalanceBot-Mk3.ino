@@ -9,7 +9,7 @@
 #define TILTBAK -8  //deg
 #define LPF_FRQ 0.25  //Hz
 #define ANGPOT_RANGE 5 //deg
-#define SPDPOT_RANGE 50 //rpm
+#define SPDPOT_RANGE 150 //rpm
 #define SAMPLETIME 20 //ms
 #define DUAL_LOOP true
 
@@ -33,9 +33,9 @@ double angOut;  //0-255
 #if DUAL_LOOP
 //Speed Control Params
 double spdSetPointRPM = 0;
-double spdKp = 1;
-double spdKi = 0;
-double spdKd = 0;
+double spdKp = .1;
+double spdKi = .5;
+double spdKd = .15;
 double spdMaxRPM = 170;
 double spdMinRPM = -spdMaxRPM;
 //Speed Control Vars
@@ -45,7 +45,7 @@ double spdMotorAvg;
 double spdMotorAvgLPF;
 double spdOffsetRPM;
 double spdOffset;
-double spdSetPointScaled = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM);
+double spdSetPointScaled = scale(spdSetPointRPM,spdMaxRPM,spdMinRPM,255,-255);
 double spdSP = spdSetPointScaled;
 double spdIn; // 0-255
 double spdOut;  //0-255
@@ -114,10 +114,10 @@ void loop(){
     spdSP = spdSetPointScaled +spdOffset;
     spdMotor1 = motor1.getCurrentSpeed();
     spdMotor2 = motor2.getCurrentSpeed();
-    spdMotorAvg = (spdMotor1+spdMotor2)/2;
+    spdMotorAvg = (spdMotor1-spdMotor2)/2;
     spdLPF.input(spdMotorAvg);
     spdMotorAvgLPF = spdLPF.output();
-    spdIn = scale(spdMotorAvgLPF,spdMaxRPM,spdMinRPM);
+    spdIn = -scale(spdMotorAvgLPF,spdMaxRPM,spdMinRPM,255,-255);
     spdPID.Compute();
     #endif
     //Angle Control
@@ -142,33 +142,33 @@ void loop(){
 
     #if true
         #if true
-    Serial.print("motorSpd:");
-    Serial.print(spdMotorAvgLPF);
+    // Serial.print("motorSpd:");
+    // Serial.print(motor1.getCurrentSpeed());
     // Serial.print(" spdSPRPM:");
     // Serial.print(spdSetPointRPM+spdOffsetRPM);
+    Serial.print(" spdIn:");
+    Serial.print(spdIn);
     Serial.print(" spdSP:");
     Serial.print(spdSP);
     // Serial.print(" spdIn:");
     // Serial.print(spdIn);
         // #endif
         // #if false
-    Serial.print(" motorSpd:");
-    Serial.print(motor1.getCurrentSpeed());
     // Serial.print(" angIn:");
     // Serial.print(angIn);
-    Serial.print(" angSP:");
-    Serial.print(angSetPointScaled +angOffset);
-    Serial.print(" angOut:");
-    Serial.print(angOut);
+    // Serial.print(" angSP:");
+    // Serial.print(angSetPointScaled +angOffset);
+    // Serial.print(" angOut:");
+    // Serial.print(angOut);
     Serial.print(" spdOut:");
     Serial.print(spdOut);
-    // Serial.print(" angSPdeg:");
-    // Serial.print(angSetPointDeg+angOffsetDeg);
+    // Serial.print(" spdErr:");
+    // Serial.print(spdSP-spdIn);
         #endif
 
     Serial.print("\n");
     #endif
    //Motor Output
-    motor1.setMotorPwm(-pidSum);
-    motor2.setMotorPwm(pidSum);
+    motor1.setMotorPwm(-spdOut);
+    motor2.setMotorPwm(spdOut);
 }
