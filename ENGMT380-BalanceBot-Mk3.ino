@@ -15,8 +15,8 @@
 
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
-double angKp = 7.5;
-double angKi = 15;
+double angKp = 3.5;
+double angKi = 8;
 double angKd = 0;
 double angMaxDeg = 25;
 double angMinDeg = -angMaxDeg;
@@ -25,7 +25,7 @@ double angYdeg;
 double angYscaled;
 double angOffsetDeg;
 double angOffset;
-double angSetPointScaled = scale(angSetPointDeg,angMaxDeg,angMinDeg);
+double angSetPointScaled = scale(angSetPointDeg,angMaxDeg,angMinDeg,255,-255);
 double angSP = angSetPointScaled;
 double angIn; // 0-255
 double angOut;  //0-255
@@ -96,7 +96,7 @@ void setup(){
 
     gyro.begin();
     angYdeg = gyro.getAngleY();
-    angYscaled = scale(angYdeg,angMaxDeg,angMinDeg);
+    angYscaled = scale(angYdeg,angMaxDeg,angMinDeg,255,-255);
     angIn = angYscaled;
     angPID.SetSampleTime(SAMPLETIME); //ms
     angPID.SetOutputLimits(-255,255);
@@ -131,7 +131,9 @@ void loop(){
     // #else
     angSP = angSetPointScaled +angOffset;
     angYdeg = gyro.getAngleY();
-    angIn = 255-scale(angYdeg,angMaxDeg,angMinDeg);
+    angIn = -scale(angYdeg,angMaxDeg,angMinDeg,255,-255)-spdOut;
+    if (angIn > 255) angIn = 255;
+    else if (angIn < -255) angIn = -255;
     angPID.Compute();
 
     //cap at limits
@@ -154,8 +156,8 @@ void loop(){
     // Serial.print(spdIn);
         // #endif
         // #if false
-    // Serial.print(" angIn:");
-    // Serial.print(angIn);
+    Serial.print(" angIn:");
+    Serial.print(angIn);
     // Serial.print(" angSP:");
     // Serial.print(angSetPointScaled +angOffset);
     // Serial.print(" angOut:");
@@ -169,6 +171,6 @@ void loop(){
     Serial.print("\n");
     #endif
    //Motor Output
-    motor1.setMotorPwm(-spdOut);
-    motor2.setMotorPwm(spdOut);
+    motor1.setMotorPwm(-angOut);
+    motor2.setMotorPwm(angOut);
 }
