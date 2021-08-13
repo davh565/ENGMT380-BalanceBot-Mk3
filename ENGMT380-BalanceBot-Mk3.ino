@@ -52,6 +52,7 @@ double spdOut;  //0-255
 double pidBias = 1.0; // 0 angle control, 1 speed control, 0.5 equal mix
 double angInMixed;
 #endif
+double pidSum;
 //Class Instantiation
     // MeUltrasonicSensor ultraSensor(PORT_7);
 MeGyro gyro;
@@ -124,15 +125,18 @@ void loop(){
         //modify setpoint by pot value
     angOffsetDeg = scale(angPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
     angOffset = scale(angOffsetDeg,angMaxDeg,angMinDeg,255,-255);
-    #if DUAL_LOOP
-    //cascade PID, speed outer loop, angle inner loop
-    angSP = mix(angSetPointScaled +angOffset,spdOut,pidBias);
-    #else
+    // #if DUAL_LOOP
+    // //cascade PID, speed outer loop, angle inner loop
+    // angSP = scale(angSetPointScaled +angOffset+spdOut,255,0);
+    // #else
     angSP = angSetPointScaled +angOffset;
-    #endif
     angYdeg = gyro.getAngleY();
     angIn = 255-scale(angYdeg,angMaxDeg,angMinDeg);
     angPID.Compute();
+
+    //cap at limits
+    pidSum = angOut;
+
 
  
 
@@ -140,31 +144,31 @@ void loop(){
         #if true
     Serial.print("motorSpd:");
     Serial.print(spdMotorAvgLPF);
-    Serial.print(" spdSPRPM:");
-    Serial.print(spdSetPointRPM+spdOffsetRPM);
+    // Serial.print(" spdSPRPM:");
+    // Serial.print(spdSetPointRPM+spdOffsetRPM);
     Serial.print(" spdSP:");
     Serial.print(spdSP);
-    Serial.print(" spdIn:");
-    Serial.print(spdIn);
-    Serial.print(" spdOut:");
-    Serial.print(spdOut);
-        #endif
-        #if false
-    Serial.print("motorSpd:");
+    // Serial.print(" spdIn:");
+    // Serial.print(spdIn);
+        // #endif
+        // #if false
+    Serial.print(" motorSpd:");
     Serial.print(motor1.getCurrentSpeed());
-    Serial.print(" angIn:");
-    Serial.print(angIn);
+    // Serial.print(" angIn:");
+    // Serial.print(angIn);
+    Serial.print(" angSP:");
+    Serial.print(angSetPointScaled +angOffset);
     Serial.print(" angOut:");
     Serial.print(angOut);
-    Serial.print(" angSP:");
-    Serial.print(angSP);
-    Serial.print(" angSPdeg:");
-    Serial.print(angSetPointDeg+angOffsetDeg);
+    Serial.print(" spdOut:");
+    Serial.print(spdOut);
+    // Serial.print(" angSPdeg:");
+    // Serial.print(angSetPointDeg+angOffsetDeg);
         #endif
 
     Serial.print("\n");
     #endif
    //Motor Output
-    motor1.setMotorPwm(-spdOut);
-    motor2.setMotorPwm(spdOut);
+    motor1.setMotorPwm(-pidSum);
+    motor2.setMotorPwm(pidSum);
 }
