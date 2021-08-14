@@ -8,8 +8,8 @@
 #define UPRIGHT 0  //deg
 #define TILTBAK 0  //deg
 #define LPF_FRQ 0.25  //Hz
-#define ANGPOT_RANGE 35 //deg
-#define SPDPOT_RANGE 50 //rpm
+#define TURNPOT_RANGE 60 //deg
+#define SPDPOT_RANGE 90 //rpm
 #define SAMPLETIME 20 //ms
 #define DUAL_LOOP true
 // robot physical paramers
@@ -66,7 +66,7 @@ double spdMotorSum;
 double spdMotorDifference;
 double turnSetPointDeg = 0;
 
-double turnKp = 1;//2.5;
+double turnKp = 0;//2.5;
 double turnKi = 0;//1;
 double turnKd = 0;
 double turnMaxDeg = 25;
@@ -176,34 +176,30 @@ void loop(){
 
        //Turn Control
         //modify setpoint by pot value
-    turnOffsetDeg = scale(turnPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
+    turnOffsetDeg = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE);
     turnOffset = scale(turnOffsetDeg,turnMaxDeg,turnMinDeg,255,-255);
     turnSP = turnSetPointScaled + turnOffset;
     turnIn = -scale(spdMotorDifference,spdMaxRPM,spdMinRPM,255,-255);
     turnPID.Compute();
 
-    // Serial.print("motorSpd:");
-    // Serial.print(motor1.getCurrentSpeed());
-    // Serial.print(" spdSPRPM:");
-    // Serial.print(spdSetPointRPM+spdOffsetRPM);
-    Serial.print(" spdIn:");
-    Serial.print(spdIn);
-    Serial.print(" spdSP:");
-    Serial.print(spdSP);
     // Serial.print(" spdIn:");
     // Serial.print(spdIn);
-        // 
-        // #if false
-    Serial.print(" angIn:");
-    Serial.print(angIn);
-    // Serial.print(" angSP:");
-    // Serial.print(angSetPointScaled +angOffset);
-    // Serial.print(" angOut:");
-    // Serial.print(angOut);
-    Serial.print(" spdOut:");
-    Serial.print(spdOut);
-    // Serial.print(" spdErr:");
-    // Serial.print(spdSP-spdIn);
+    // Serial.print("spdSP:");
+    // Serial.print(spdSP);
+    Serial.print(" turnSP:");
+    Serial.print(turnSP);
+    // Serial.print(" angIn:");
+    // Serial.print(angIn);
+    // Serial.print(" spdOut:");
+    // Serial.print(spdOut);
+    Serial.print(" mtr1Spd: ");
+    Serial.print(-spdMotor1);
+    Serial.print(" mtr2Spd: ");
+    Serial.print(spdMotor2);
+    // Serial.print(" mtrSum: ");
+    // Serial.print(spdMotorSum);
+    // Serial.print(" mtrDiff: ");
+    // Serial.print(spdMotorDifference);
 
     Serial.print("\n");
     
