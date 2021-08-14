@@ -15,12 +15,14 @@
 
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
-double angKp = 6;//2.5;
-double angKi = 8;//1;
-double angKd = 0;
-double angKpAgg = 3.5;//2.5;
-double angKiAgg = 2;//1;
-double angKdAgg = 0;
+double angKpAgg = 15;//2.5;
+double angKiAgg = 15;//1;
+double angKdAgg = 0.05;
+double angKpCon = 4.5;//2.5;
+double angKiCon = 3;//1;
+double angKdCon = 0;
+double angConMaxDeg = 25;
+double angConMinDeg = -25;
 double angMaxDeg = 41;
 double angMinDeg = -41;
 //Angle Control Vars
@@ -33,7 +35,7 @@ double angSP = angSetPointScaled;
 double angIn; // 0-255
 double angOut;  //0-255
 
-#if DUAL_LOOP
+
 //Speed Control Params
 double spdSetPointRPM = 0;
 double spdKp = 1;
@@ -54,7 +56,27 @@ double spdIn; // 0-255
 double spdOut;  //0-255
 double pidBias = 1.0; // 0 angle control, 1 speed control, 0.5 equal mix
 double angInMixed;
-#endif
+
+
+//Turn Control Params
+double turnSetPointDeg = 0;
+
+double turnKp = 4.5;//2.5;
+double turnKi = 3;//1;
+double turnKd = 0;
+double turnMaxDeg = 25;
+double turnMinDeg = -25;
+double turnMaxDeg = 41;
+double turnMinDeg = -41;
+//Turn Steering Vars
+double turnYdeg;
+double turnYscaled;
+double turnOffsetDeg;
+double turnOffset;
+double turnSetPointScaled = scale(turnSetPointDeg,turnMaxDeg,turnMinDeg,255,-255);
+double turnSP = turnSetPointScaled;
+double turnIn; // 0-255
+double turnOut;  //0-255
 double motorOut;
 //Class Instantiation
     // MeUltrasonicSensor ultraSensor(PORT_7);
@@ -64,10 +86,10 @@ MePotentiometer spdPot(PORT_8);
 MeEncoderOnBoard motor1(SLOT1);
 MeEncoderOnBoard motor2(SLOT2);
 FilterOnePole spdLPF( LOWPASS, LPF_FRQ);
-PID angPID(&angIn, &angOut, &angSP, angKp, angKi, angKd, DIRECT);
-#if DUAL_LOOP
+PID angPID(&angIn, &angOut, &angSP, angKpCon, angKiCon, angKdCon, DIRECT);
+
 PID spdPID(&spdIn, &spdOut, &spdSP, spdKp, spdKi, spdKd, DIRECT);
-#endif
+
 
 void isr_process_encoder1(void){
     if(digitalRead(motor1.getPortB()) == 0) motor1.pulsePosMinus();
@@ -79,14 +101,14 @@ void isr_process_encoder2(void){
 }
 
 void setup(){
-    #if DUAL_LOOP
+    
     spdMotorAvg = 0;
     spdIn = 0;
     spdPID.SetSampleTime(SAMPLETIME); //ms
     spdPID.SetOutputLimits(-255,255);
     spdPID.SetMode(AUTOMATIC);
 
-    #endif
+    
     attachInterrupt(motor1.getIntNum(), isr_process_encoder1, RISING);
     attachInterrupt(motor2.getIntNum(), isr_process_encoder2, RISING);
     //Set Motor PWM 8KHz
@@ -109,7 +131,7 @@ void setup(){
 void loop(){
     motor1.updateSpeed();
     motor2.updateSpeed();
-    #if DUAL_LOOP
+    
     //Speed Control
         //modify setpoint by pot value
     spdOffsetRPM = scale(spdPot.read(),972,0,SPDPOT_RANGE,-SPDPOT_RANGE);
@@ -122,18 +144,19 @@ void loop(){
     spdMotorAvgLPF = spdLPF.output();
     spdIn = -scale(spdMotorAvgLPF,spdMaxRPM,spdMinRPM,255,-255);
     spdPID.Compute();
-    #endif
+    
     //Angle Control
     gyro.update();
         //modify setpoint by pot value
     angOffsetDeg = scale(angPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
     angOffset = scale(angOffsetDeg,angMaxDeg,angMinDeg,255,-255);
-    // #if DUAL_LOOP
-    // //cascade PID, speed outer loop, angle inner loop
-    // angSP = scale(angSetPointScaled +angOffset+spdOut,255,0);
-    // #else
     angSP = spdOut;
     angYdeg = gyro.getAngleY();
+    //Choose between agressive and conservative tunings based on current angle
+    if (angYdeg > angConMaxDeg || angYdeg < angConMinDeg) {
+        angPID.SetTunings(angKpAgg,angKiAgg,angKdAgg);
+    }
+    else angPID.SetTunings(angKpCon,angKiCon,angKdCon);
     angIn = -scale(angYdeg,angMaxDeg,angMinDeg,255,-255);
     if (angIn > 255) angIn = 255;
     else if (angIn < -255) angIn = -255;
@@ -147,8 +170,7 @@ void loop(){
 
  
 
-    #if true
-        #if true
+
     // Serial.print("motorSpd:");
     // Serial.print(motor1.getCurrentSpeed());
     // Serial.print(" spdSPRPM:");
@@ -159,7 +181,7 @@ void loop(){
     Serial.print(spdSP);
     // Serial.print(" spdIn:");
     // Serial.print(spdIn);
-        // #endif
+        // 
         // #if false
     Serial.print(" angIn:");
     Serial.print(angIn);
@@ -171,10 +193,10 @@ void loop(){
     Serial.print(spdOut);
     // Serial.print(" spdErr:");
     // Serial.print(spdSP-spdIn);
-        #endif
+        
 
     Serial.print("\n");
-    #endif
+    
    //Motor Output
     motor1.setMotorPwm(-motorOut);
     motor2.setMotorPwm(motorOut);
