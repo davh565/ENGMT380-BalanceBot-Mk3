@@ -26,7 +26,8 @@
 			"xstring": "cpp",
 			"xutility": "cpp",
 			"xlocale": "cpp",
-			"xstddef": "cpp"
+			"xstddef": "cpp",
+			"cmath": "cpp"
 		}
 	}
 }

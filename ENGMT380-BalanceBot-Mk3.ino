@@ -8,14 +8,16 @@
 #define UPRIGHT 0  //deg
 #define TILTBAK 0  //deg
 #define LPF_FRQ 0.25  //Hz
-#define TURNPOT_RANGE 60 //deg
-#define SPDPOT_RANGE 90 //rpm
+#define TURNPOT_RANGE 150 //deg
+#define SPDPOT_RANGE 20 //rpm
 #define SAMPLETIME 20 //ms
 #define DUAL_LOOP true
 // robot physical paramers
 const double l = 0.17; //m  length from wheel to wheel
 const double r = .032; //m  wheel radius
 
+double adjK;
+double currentKp;
 //Angle Control Params
 double angSetPointDeg = UPRIGHT;
 double angKpAgg = 15;//2.5;
@@ -26,8 +28,8 @@ double angKiCon = 3;//1;
 double angKdCon = 0;
 double angConMaxDeg = 25;
 double angConMinDeg = -25;
-double angMaxDeg = 41;
-double angMinDeg = -41;
+double angMaxDeg = 25;//41;
+double angMinDeg = -25;//-41;
 //Angle Control Vars
 double angYdeg;
 double angYscaled;
@@ -43,7 +45,7 @@ double angOut;  //0-255
 double spdSetPointRPM = 0;
 double spdKp = 1;
 double spdKi = 0;
-double spdKd = 0;
+double spdKd = .1;
 double spdMaxRPM = 170;
 double spdMinRPM = -spdMaxRPM;
 //Speed Control Vars
@@ -153,7 +155,10 @@ void loop(){
     spdMotorDifference = spdMotor1 - spdMotor2;
     spdLPF.input(spdMotorSum);
     spdMotorsumLPF = spdLPF.output();
-    
+
+    adjK = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE); //TEMP
+    // currentKp = spdPID.GetKp();
+    // if (fabs(adjK) > fabs(currentKp) * 1.1 || fabs(adjK) < fabs(currentKp) * 0.9) spdPID.SetTunings(adjK,spdKi,spdKp); //TEMP
     //Speed Control
         //modify setpoint by pot value
     spdOffsetRPM = scale(spdPot.read(),972,0,SPDPOT_RANGE,-SPDPOT_RANGE);
@@ -167,11 +172,12 @@ void loop(){
     angSP = spdOut;
     angYdeg = gyro.getAngleY();
     //Choose between agressive and conservative tunings based on current angle
-    if (angYdeg > angConMaxDeg || angYdeg < angConMinDeg) {
-        angPID.SetTunings(angKpAgg,angKiAgg,angKdAgg);
-    }
-    else angPID.SetTunings(angKpCon,angKiCon,angKdCon);
-    angIn = scale(angYdeg,angMaxDeg,angMinDeg,255,-255);
+    // if (angYdeg > angConMaxDeg || angYdeg < angConMinDeg) {
+    //     angPID.SetTunings(angKpAgg,angKiAgg,angKdAgg);
+    // }
+    // else 
+    // angPID.SetTunings(angKpCon,angKiCon,angKdCon);
+    angIn = scale(angYdeg,angMaxDeg,angMinDeg,255,-255)+adjK;
     angPID.Compute();
 
        //Turn Control
@@ -182,20 +188,24 @@ void loop(){
     turnIn = -scale(spdMotorDifference,spdMaxRPM,spdMinRPM,255,-255);
     turnPID.Compute();
 
-    // Serial.print(" spdIn:");
-    // Serial.print(spdIn);
-    // Serial.print("spdSP:");
+    Serial.print(" spdIn:");
+    Serial.print(spdIn);
+    // Serial.print(" spdSP:");
     // Serial.print(spdSP);
-    Serial.print(" turnSP:");
-    Serial.print(turnSP);
+    // Serial.print(" turnSP:");
+    // Serial.print(turnSP);
     // Serial.print(" angIn:");
     // Serial.print(angIn);
     // Serial.print(" spdOut:");
     // Serial.print(spdOut);
-    Serial.print(" mtr1Spd: ");
-    Serial.print(-spdMotor1);
-    Serial.print(" mtr2Spd: ");
-    Serial.print(spdMotor2);
+    Serial.print(" angOut:");
+    Serial.print(angOut);
+    // Serial.print(" mtr1Spd: ");
+    // Serial.print(-spdMotor1);
+    // Serial.print(" mtr2Spd: ");
+    // Serial.print(spdMotor2);
+    // Serial.print(" kP: ");
+    // Serial.print(currentKp);
     // Serial.print(" mtrSum: ");
     // Serial.print(spdMotorSum);
     // Serial.print(" mtrDiff: ");
