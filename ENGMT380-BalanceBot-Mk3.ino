@@ -9,8 +9,9 @@
 #define TILTBAK 0  //deg
 #define LPF_FRQ 0.25  //Hz
 #define TURNPOT_RANGE 150 //deg
+#define ANGPOT_RANGE 150 //deg
 #define SPDPOT_RANGE 20 //rpm
-#define SAMPLETIME 20 //ms
+#define SAMPLETIME 10 //ms
 #define DUAL_LOOP true
 // robot physical paramers
 const double l = 0.17; //m  length from wheel to wheel
@@ -87,7 +88,8 @@ double motorOut;
 //Class Instantiation
     // MeUltrasonicSensor ultraSensor(PORT_7);
 MeGyro gyro;
-MePotentiometer turnPot(PORT_7);
+MePotentiometer angPot(PORT_7);
+// MePotentiometer turnPot(PORT_7);
 MePotentiometer spdPot(PORT_8);
 MeEncoderOnBoard motor1(SLOT2);
 MeEncoderOnBoard motor2(SLOT1);
@@ -156,20 +158,22 @@ void loop(){
     spdLPF.input(spdMotorSum);
     spdMotorsumLPF = spdLPF.output();
 
-    adjK = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE); //TEMP
+    // adjK = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE); //TEMP
     // currentKp = spdPID.GetKp();
     // if (fabs(adjK) > fabs(currentKp) * 1.1 || fabs(adjK) < fabs(currentKp) * 0.9) spdPID.SetTunings(adjK,spdKi,spdKp); //TEMP
     //Speed Control
         //modify setpoint by pot value
     spdOffsetRPM = scale(spdPot.read(),972,0,SPDPOT_RANGE,-SPDPOT_RANGE);
-    spdOffset = scale(spdOffsetRPM,spdMaxRPM,spdMinRPM,255,-255);
+    spdOffset = -scale(spdOffsetRPM,spdMaxRPM,spdMinRPM,255,-255);
     spdSP = spdSetPointScaled +spdOffset;
     spdIn = -scale(spdMotorsumLPF,spdMaxRPM,spdMinRPM,255,-255);
     spdPID.Compute();
     
     //Angle Control
+    angOffsetDeg = scale(spdPot.read(),972,0,ANGPOT_RANGE,-ANGPOT_RANGE);
+    angOffset = -scale(angOffsetDeg,angMinDeg,angMaxDeg,255,-255);
     gyro.update();
-    angSP = spdOut;
+    angSP = UPRIGHT+angOffset;
     angYdeg = gyro.getAngleY();
     //Choose between agressive and conservative tunings based on current angle
     // if (angYdeg > angConMaxDeg || angYdeg < angConMinDeg) {
@@ -177,16 +181,16 @@ void loop(){
     // }
     // else 
     // angPID.SetTunings(angKpCon,angKiCon,angKdCon);
-    angIn = scale(angYdeg,angMaxDeg,angMinDeg,255,-255)+adjK;
+    angIn = scale(angYdeg,angMaxDeg,angMinDeg,255,-255);
     angPID.Compute();
 
        //Turn Control
-        //modify setpoint by pot value
-    turnOffsetDeg = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE);
-    turnOffset = scale(turnOffsetDeg,turnMaxDeg,turnMinDeg,255,-255);
-    turnSP = turnSetPointScaled + turnOffset;
-    turnIn = -scale(spdMotorDifference,spdMaxRPM,spdMinRPM,255,-255);
-    turnPID.Compute();
+    //     //modify setpoint by pot value
+    // turnOffsetDeg = scale(turnPot.read(),972,0,TURNPOT_RANGE,-TURNPOT_RANGE);
+    // turnOffset = scale(turnOffsetDeg,turnMaxDeg,turnMinDeg,255,-255);
+    // turnSP = turnSetPointScaled + turnOffset;
+    // turnIn = -scale(spdMotorDifference,spdMaxRPM,spdMinRPM,255,-255);
+    // turnPID.Compute();
 
     Serial.print(" spdIn:");
     Serial.print(spdIn);
@@ -226,7 +230,9 @@ void loop(){
     }
     else {
 
-    motor1.setMotorPwm(-angOut+turnOut);
-    motor2.setMotorPwm(angOut+turnOut);
+    motor1.setMotorPwm(-angOut);
+    motor2.setMotorPwm(angOut);
+    // motor1.setMotorPwm(-angOut+turnOut);
+    // motor2.setMotorPwm(angOut+turnOut);
     }
 }
